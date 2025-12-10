@@ -1,41 +1,40 @@
 import 'package:flutter/material.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
-import 'models/product_model.dart';
-import 'providers/product_provider.dart';
-import 'screens/products_screen.dart';
+import 'pages/home_page.dart';
+import 'providers/products_provider.dart';
+import 'providers/categories_provider.dart';
+import 'providers/operations_provider.dart';
+import 'providers/documents_provider.dart';
+import 'providers/operation_types_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Инициализация Hive
   await Hive.initFlutter();
-  Hive.registerAdapter(ProductModelAdapter());
-  await Hive.openBox<ProductModel>('products');
 
-  runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => ProductProvider()),
-      ],
-      child: const MyApp(),
-    ),
-  );
+  runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Inventory App',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        useMaterial3: true,
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => ProductsProvider()),
+        ChangeNotifierProvider(create: (_) => CategoriesProvider()),
+        ChangeNotifierProvider(create: (_) => OperationsProvider()),
+        ChangeNotifierProvider(create: (_) => DocumentsProvider()),
+        ChangeNotifierProvider(create: (_) => OperationTypesProvider()),
+      ],
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        title: 'Inventory App',
+        theme: ThemeData(
+          primarySwatch: Colors.blue,
+        ),
+        home: HomePage(),
       ),
-      home: const ProductsScreen(),
     );
   }
 }
