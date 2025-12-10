@@ -20,7 +20,7 @@ class DocumentsPage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(doc.name,
+                  Text(doc.name ?? 'Без названия',
                       style: const TextStyle(fontWeight: FontWeight.bold)),
                   Text("Файл: ${doc.fileName ?? '-'}"),
                   Text("Дата: ${doc.createdAt ?? '-'}"),
