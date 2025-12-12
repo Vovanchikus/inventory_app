@@ -31,6 +31,9 @@ class ProductModel extends HiveObject {
   @HiveField(8)
   int? categoryId;
 
+  @HiveField(9)
+  String invNumber;
+
   ProductModel({
     required this.id,
     required this.name,
@@ -41,5 +44,6 @@ class ProductModel extends HiveObject {
     this.createdAt,
     this.updatedAt,
     this.categoryId,
+    required this.invNumber,
   });
 }

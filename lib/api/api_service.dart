@@ -1,13 +1,13 @@
 import 'dart:convert';
 import 'dart:io';
-import 'package:http/io_client.dart';
 import 'package:http/http.dart' as http;
+import 'package:http/io_client.dart';
 
 class ApiService {
   final String baseUrl;
   final bool ignoreSsl;
 
-  late http.Client _client;
+  late final http.Client _client;
 
   ApiService({required this.baseUrl, this.ignoreSsl = false}) {
     if (ignoreSsl) {
@@ -22,13 +22,27 @@ class ApiService {
 
   Future<List<dynamic>> fetchList(String endpoint) async {
     final url = Uri.parse('$baseUrl/$endpoint');
-    final response =
-        await _client.get(url).timeout(const Duration(seconds: 10));
 
-    if (response.statusCode != 200) {
-      throw Exception('Failed to load $endpoint: ${response.statusCode}');
+    try {
+      final response =
+          await _client.get(url).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode != 200) {
+        throw Exception('Failed to load $endpoint: ${response.statusCode}');
+      }
+
+      final jsonData = jsonDecode(response.body);
+      if (jsonData['data'] is List<dynamic>) {
+        return jsonData['data'] as List<dynamic>;
+      } else {
+        throw Exception('Invalid data format for $endpoint');
+      }
+    } catch (e) {
+      throw Exception('Error fetching $endpoint: $e');
     }
+  }
 
-    return jsonDecode(response.body)['data'] as List<dynamic>;
+  void dispose() {
+    _client.close();
   }
 }

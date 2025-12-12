@@ -25,6 +25,11 @@ dependencies:
   # State Management
   provider: ^6.1.5+1
 
+  mobile_scanner: ^7.1.3 # Сканер QR
+
+  permission_handler: ^12.0.1 # Запрос для разрешений
+  collection: ^1.19.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

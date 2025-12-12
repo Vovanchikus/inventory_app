@@ -26,13 +26,14 @@ class ProductModelAdapter extends TypeAdapter<ProductModel> {
       createdAt: fields[6] as DateTime?,
       updatedAt: fields[7] as DateTime?,
       categoryId: fields[8] as int?,
+      invNumber: fields[9] as String,
     );
   }
 
   @override
   void write(BinaryWriter writer, ProductModel obj) {
     writer
-      ..writeByte(9)
+      ..writeByte(10)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -50,7 +51,9 @@ class ProductModelAdapter extends TypeAdapter<ProductModel> {
       ..writeByte(7)
       ..write(obj.updatedAt)
       ..writeByte(8)
-      ..write(obj.categoryId);
+      ..write(obj.categoryId)
+      ..writeByte(9)
+      ..write(obj.invNumber);
   }
 
   @override

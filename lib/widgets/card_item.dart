@@ -1,29 +1,43 @@
 import 'package:flutter/material.dart';
+import '../models/product_model.dart';
+import '../theme/app_theme.dart';
 
-class CardItem extends StatelessWidget {
-  final Widget child;
-  final EdgeInsets padding;
+class ProductCard extends StatelessWidget {
+  final ProductModel product;
   final VoidCallback? onTap;
 
-  const CardItem({
-    required this.child,
-    this.padding = const EdgeInsets.all(12),
-    this.onTap,
-    super.key,
-  });
+  const ProductCard({super.key, required this.product, this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return Card(
-      margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      elevation: 2,
-      child: InkWell(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      elevation: 3,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shadowColor: AppTheme.shadow,
+      child: ListTile(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: padding,
-          child: child,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        leading: CircleAvatar(
+          radius: 26,
+          backgroundColor: AppTheme.primary.withOpacity(0.15),
+          child: Text(
+            product.name.isNotEmpty ? product.name[0].toUpperCase() : "?",
+            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+          ),
+        ),
+        title: Text(
+          product.name,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
+        subtitle: Text(
+          "К-во: ${product.quantity} ${product.unit} Inv: ${product.invNumber}",
+          style: const TextStyle(color: AppTheme.textSecondary),
+        ),
+        trailing: Text(
+          "${product.price} ₴",
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
         ),
       ),
     );
