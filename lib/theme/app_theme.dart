@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  // Цвета
+  // Основные цвета
   static const Color primary = Color(0xFF4A90E2);
   static const Color secondary = Color(0xFF50E3C2);
   static const Color background = Color(0xFFF7F8FA);
@@ -11,7 +11,12 @@ class AppTheme {
   static const Color textSecondary = Color(0xFF7B7B7B);
   static const Color accent = Color(0xFFFFC107);
 
-  // Тема
+  // Дополнительные цвета для удобства
+  static Color get backgroundCard => card; // цвет фона карточек
+  static Color get text => textPrimary; // основной цвет текста
+  static Color get textSecondaryColor => textSecondary; // вторичный текст
+
+  // Тема приложения
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,
@@ -38,7 +43,7 @@ class AppTheme {
         centerTitle: true,
       ),
       cardTheme: CardThemeData(
-        color: card,
+        color: backgroundCard,
         elevation: 4,
         shadowColor: shadow,
         shape: RoundedRectangleBorder(
@@ -46,10 +51,10 @@ class AppTheme {
         ),
         margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       ),
-      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+      bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor: Colors.white,
         selectedItemColor: primary,
-        unselectedItemColor: textSecondary,
+        unselectedItemColor: textSecondaryColor,
         showUnselectedLabels: true,
         type: BottomNavigationBarType.fixed,
       ),

@@ -8,7 +8,7 @@ part of 'operation_model.dart';
 
 class OperationModelAdapter extends TypeAdapter<OperationModel> {
   @override
-  final int typeId = 2;
+  final int typeId = 5;
 
   @override
   OperationModel read(BinaryReader reader) {

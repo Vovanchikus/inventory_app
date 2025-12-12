@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import '../models/product_model.dart';
+import '../models/category_model.dart';
 import '../widgets/card_item.dart';
 import '../theme/app_theme.dart';
 import '../services/sync_service.dart';
+import '../widgets/category_selector.dart';
 
 class ProductsPage extends StatefulWidget {
   final SyncService syncService;
@@ -21,6 +23,7 @@ class ProductsPage extends StatefulWidget {
 
 class _ProductsPageState extends State<ProductsPage> {
   List<ProductModel> products = [];
+  List<ProductModel> filteredProducts = [];
   bool isSyncing = false;
 
   @override
@@ -34,12 +37,6 @@ class _ProductsPageState extends State<ProductsPage> {
     _syncProductsDelayed();
   }
 
-  Future<void> loadProducts() async {
-    final box = await Hive.openBox<ProductModel>('products');
-    if (!mounted) return;
-    setState(() => products = box.values.toList());
-  }
-
   Future<void> _syncProductsDelayed() async {
     await Future.delayed(const Duration(milliseconds: 300));
     await refreshProducts();
@@ -48,7 +45,7 @@ class _ProductsPageState extends State<ProductsPage> {
   Future<void> refreshProducts() async {
     setState(() => isSyncing = true);
     try {
-      await widget.syncService.syncProducts();
+      await widget.syncService.syncAll();
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -63,6 +60,61 @@ class _ProductsPageState extends State<ProductsPage> {
       if (mounted) setState(() => isSyncing = false);
     }
   }
+
+  Future<void> loadProducts() async {
+    final box = await Hive.openBox<ProductModel>('products');
+    if (!mounted) return;
+    setState(() {
+      products = box.values.toList();
+      filteredProducts = List.from(products);
+    });
+  }
+
+  // ------------------------------------------------------------
+  // ФИЛЬТРАЦИЯ ПО КАТЕГОРИЯМ (работает с CategoryModel.childrenIds)
+  // ------------------------------------------------------------
+
+  void filterProducts(CategoryModel? category) {
+    setState(() {
+      if (category == null) {
+        filteredProducts = List.from(products);
+      } else {
+        final ids = _getAllCategoryIds(category);
+        filteredProducts = products
+            .where((p) => p.categoryId != null && ids.contains(p.categoryId))
+            .toList();
+      }
+    });
+  }
+
+  /// Возвращает все id категории и её рекурсивных детей
+  List<int> _getAllCategoryIds(CategoryModel category) {
+    final List<int> ids = [category.id];
+
+    // рекурсивно обрабатываем childrenIds (в модели у тебя хранится список id)
+    for (final childId in category.childrenIds) {
+      final child = _getCategoryById(childId);
+      if (child != null) {
+        ids.addAll(_getAllCategoryIds(child));
+      }
+    }
+
+    return ids;
+  }
+
+  /// БЕЗОПАСНО получить категорию по id из Hive — возвращает nullable
+  CategoryModel? _getCategoryById(int id) {
+    // Получаем уже открытый бокс (если он не открыт, лучше открыть заранее в инициализации)
+    if (!Hive.isBoxOpen('categories')) return null;
+    final box = Hive.box<CategoryModel>('categories');
+
+    for (final c in box.values) {
+      if (c.id == id) return c;
+    }
+    return null;
+  }
+
+  // ------------------------------------------------------------
 
   void _showProductById(String id) {
     final product = products.firstWhere(
@@ -82,7 +134,7 @@ class _ProductsPageState extends State<ProductsPage> {
       context,
       MaterialPageRoute(
         builder: (_) => Scaffold(
-          appBar: AppBar(title: const Text("Products")),
+          appBar: AppBar(title: Text(product.name)),
           body: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -92,10 +144,10 @@ class _ProductsPageState extends State<ProductsPage> {
                     style: const TextStyle(
                         fontSize: 22, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
-                Text('Price: ${product.price}'),
-                Text('Unit: ${product.unit}'),
-                Text('Quantity: ${product.quantity}'),
-                Text('Inv Number: ${product.invNumber}'),
+                Text('Цена: ${product.price}'),
+                Text('Ед. измерения: ${product.unit}'),
+                Text('Количество: ${product.quantity}'),
+                Text('Инв. номер: ${product.invNumber}'),
               ],
             ),
           ),
@@ -112,44 +164,56 @@ class _ProductsPageState extends State<ProductsPage> {
         title: const Text("Товары"),
         centerTitle: true,
       ),
-      body: Stack(
+      body: Column(
         children: [
-          RefreshIndicator(
-            onRefresh: refreshProducts,
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 400),
-              child: products.isEmpty
-                  ? ListView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      children: [
-                        SizedBox(
-                          height: MediaQuery.of(context).size.height * 0.7,
-                          child: Center(
-                            child: isSyncing
-                                ? const CircularProgressIndicator()
-                                : const Text("No products",
-                                    style: TextStyle(fontSize: 16)),
+          CategorySelector(
+            onCategorySelected: filterProducts,
+          ),
+          const Divider(height: 1),
+          Expanded(
+            child: Stack(
+              children: [
+                RefreshIndicator(
+                  onRefresh: refreshProducts,
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 400),
+                    child: filteredProducts.isEmpty
+                        ? ListView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            children: [
+                              SizedBox(
+                                height:
+                                    MediaQuery.of(context).size.height * 0.7,
+                                child: Center(
+                                  child: isSyncing
+                                      ? const CircularProgressIndicator()
+                                      : const Text("Нет товаров",
+                                          style: TextStyle(fontSize: 16)),
+                                ),
+                              ),
+                            ],
+                          )
+                        : ListView.builder(
+                            itemCount: filteredProducts.length,
+                            itemBuilder: (_, i) =>
+                                ProductCard(product: filteredProducts[i]),
                           ),
-                        ),
-                      ],
-                    )
-                  : ListView.builder(
-                      itemCount: products.length,
-                      itemBuilder: (_, i) => ProductCard(product: products[i]),
+                  ),
+                ),
+                if (isSyncing)
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    child: LinearProgressIndicator(
+                      color: AppTheme.primary,
+                      backgroundColor: AppTheme.primary.withOpacity(0.2),
+                      minHeight: 4,
                     ),
+                  ),
+              ],
             ),
           ),
-          if (isSyncing)
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: LinearProgressIndicator(
-                color: AppTheme.primary,
-                backgroundColor: AppTheme.primary.withOpacity(0.2),
-                minHeight: 4,
-              ),
-            ),
         ],
       ),
     );

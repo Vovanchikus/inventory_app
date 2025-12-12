@@ -8,7 +8,7 @@ part of 'category_model.dart';
 
 class CategoryModelAdapter extends TypeAdapter<CategoryModel> {
   @override
-  final int typeId = 5;
+  final int typeId = 2;
 
   @override
   CategoryModel read(BinaryReader reader) {
@@ -19,9 +19,9 @@ class CategoryModelAdapter extends TypeAdapter<CategoryModel> {
     return CategoryModel(
       id: fields[0] as int,
       name: fields[1] as String,
-      parentId: fields[2] as int?,
-      slug: fields[3] as String?,
-      children: (fields[4] as HiveList?)?.castHiveList(),
+      slug: fields[2] as String?,
+      parentId: fields[3] as int?,
+      childrenIds: (fields[4] as List).cast<int>(),
     );
   }
 
@@ -34,11 +34,11 @@ class CategoryModelAdapter extends TypeAdapter<CategoryModel> {
       ..writeByte(1)
       ..write(obj.name)
       ..writeByte(2)
-      ..write(obj.parentId)
-      ..writeByte(3)
       ..write(obj.slug)
+      ..writeByte(3)
+      ..write(obj.parentId)
       ..writeByte(4)
-      ..write(obj.children);
+      ..write(obj.childrenIds);
   }
 
   @override

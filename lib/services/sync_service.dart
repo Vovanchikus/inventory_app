@@ -19,8 +19,6 @@ class SyncService {
       await syncCategories();
       await syncOperations();
       await syncOperationTypes();
-
-      // Обновляем документы из операций
       await syncDocumentsFromOperations();
     } catch (e) {
       print('Sync error: $e');
@@ -36,16 +34,17 @@ class SyncService {
 
       for (var item in data) {
         final product = ProductModel(
-            id: _toInt(item['id']),
-            name: (item['name'] ?? '').toString(),
-            unit: (item['unit'] ?? '').toString(),
-            quantity: _toDouble(item['quantity']),
-            price: _toDouble(item['price']),
-            sum: _toDouble(item['sum']),
-            createdAt: _parseDate(item['created_at']),
-            updatedAt: _parseDate(item['updated_at']),
-            categoryId: _toInt(item['category_id']),
-            invNumber: (item['inv_number'] ?? '').toString());
+          id: _toInt(item['id']),
+          name: (item['name'] ?? '').toString(),
+          unit: (item['unit'] ?? '').toString(),
+          quantity: _toDouble(item['quantity']),
+          price: _toDouble(item['price']),
+          sum: _toDouble(item['sum']),
+          createdAt: _parseDate(item['created_at']),
+          updatedAt: _parseDate(item['updated_at']),
+          categoryId: _toInt(item['category_id']),
+          invNumber: (item['inv_number'] ?? '').toString(),
+        );
         box.put(product.id, product);
       }
     } catch (e) {
@@ -57,36 +56,57 @@ class SyncService {
   /// Категории
   Future<void> syncCategories() async {
     try {
-      final data = await api.fetchList('categories');
-      final box = await Hive.openBox<CategoryModel>('categories');
-      await box.clear();
-
-      for (var item in data) {
-        final category = CategoryModel(
-          id: _toInt(item['id']),
-          name: (item['name'] ?? '').toString(),
-          parentId: _toInt(item['parent_id']),
-          slug: item['slug']?.toString(),
-          children: null,
-        );
-        box.put(category.id, category);
-      }
-
-      // Добавляем детей
-      for (var category in box.values) {
-        if (category.parentId != null) {
-          final parent = box.get(category.parentId);
-          if (parent != null) {
-            final childrenList = parent.children ?? HiveList(box);
-            childrenList.add(category);
-            parent.children = childrenList;
-            parent.save();
-          }
-        }
-      }
+      final data = await api.fetchList('categories'); // уже список
+      await syncCategoriesFromJson(data);
     } catch (e) {
       print('Sync categories error: $e');
     }
+  }
+
+  /// Рекурсивная запись категорий и подкатегорий в Hive
+  Future<void> syncCategoriesFromJson(List<dynamic> json) async {
+    final box = await Hive.openBox<CategoryModel>('categories');
+    await box.clear();
+
+    // 1. Собираем базовые категории
+    final Map<int, CategoryModel> map = {};
+
+    for (var item in json) {
+      final cat = CategoryModel.fromJson(item);
+      map[cat.id] = cat;
+
+      // загружаем дочерние рекурсивно
+      void parseChildren(List<dynamic> children, int parentId) {
+        for (var c in children) {
+          final child = CategoryModel.fromJson(c);
+          child.parentId = parentId;
+          map[child.id] = child;
+
+          if (c['children'] != null) {
+            parseChildren(c['children'], child.id);
+          }
+        }
+      }
+
+      if (item['children'] != null) {
+        parseChildren(item['children'], cat.id);
+      }
+    }
+
+    // 2. Заполняем childrenIds
+    for (var cat in map.values) {
+      cat.childrenIds = map.values
+          .where((c) => c.parentId == cat.id)
+          .map((c) => c.id)
+          .toList();
+    }
+
+    // 3. Пишем в Hive
+    for (var cat in map.values) {
+      await box.put(cat.id, cat);
+    }
+
+    print('Categories synced: ${box.length}');
   }
 
   /// Операции
@@ -135,13 +155,13 @@ class SyncService {
     }
   }
 
-  /// Объединяем все документы из операций в отдельный box
+  /// Сохраняем документы из операций в отдельный box
   Future<void> syncDocumentsFromOperations() async {
     try {
       final opBox = await Hive.openBox<OperationModel>('operations');
       final docBox = await Hive.openBox<DocumentModel>('documents');
 
-      await docBox.clear(); // опционально очищаем старые документы
+      await docBox.clear();
 
       for (var operation in opBox.values) {
         for (var doc in operation.documents) {

@@ -4,7 +4,7 @@ import 'document_model.dart';
 
 part 'operation_model.g.dart';
 
-@HiveType(typeId: 2)
+@HiveType(typeId: 5)
 class OperationModel extends HiveObject {
   @HiveField(0)
   int id;
